@@ -1,0 +1,6 @@
+{
+  "name": "Nusantara Wedding Invitation & Master Studio",
+  "description": "Aplikasi web undangan pernikahan digital interaktif dengan kustomisasi musik latar, galeri foto, amplop digital, RSVP, serta panel master dan tampilan tamu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
