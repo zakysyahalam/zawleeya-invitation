@@ -3,15 +3,6 @@ import { CheckCircle2, Utensils, Users, XCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useWedding } from '../../context/WeddingContext';
 
-const MENUS = [
-  'Ayam Saos Mentega',
-  'Nasi Tongseng Sapi',
-  'Crispy Chicken Wings',
-  'Nasi Goreng Bistik Bumbu',
-  'Lidah Sambal Ijo',
-  'Katsu Mentai Butter Rice',
-  'Tidak memesan makan/minum',
-];
 type Invitation = { token: string; name: string; quota: number; attendance: 'hadir' | 'tidak_hadir' | null; respondedAt?: string | null };
 type GuestbookEntry = { id: string; name: string; avatarId?: string; message: string; createdAt: string };
 type GuestbookAvatar = { id: string; label: string; emoji: string; color: string; image: string };
@@ -20,6 +11,13 @@ const DEFAULT_AVATARS: GuestbookAvatar[] = [{ id: 'cat-1', label: 'Milo', emoji:
 export const RSVPSection: React.FC = () => {
   const { data } = useWedding();
   const menuPhotos = data.referencePhotos?.menu || [];
+  // Menu names are managed in Master > Foto Menu via each photo's caption.
+  // Ignore legacy photos without a description and remove duplicate names.
+  const menuOptions = Array.from(new Set(menuPhotos
+    .map((photo: any) => (typeof photo === 'string' ? '' : String(photo.caption || '').trim())
+    )
+    .filter(Boolean)));
+  const noOrderOption = 'Tidak memesan makan/minum';
   const token = useMemo(() => { const match = window.location.search.match(/[?&]invite=([^&]*)/); return match ? decodeURIComponent(match[1]) : ''; }, []);
   const [invitation, setInvitation] = useState<Invitation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,8 +80,8 @@ export const RSVPSection: React.FC = () => {
             <button type="button" onClick={() => { setAttendance('hadir'); setMessage(''); }} className={`rounded-xl border px-4 py-4 text-sm font-semibold flex items-center justify-center gap-2 ${attendance === 'hadir' ? 'bg-emerald-700 text-white border-emerald-700' : 'bg-white text-stone-700 border-stone-200 hover:border-emerald-500'}`}><CheckCircle2 className="w-4 h-4"/>Hadir</button>
             <button type="button" onClick={() => { setAttendance('tidak_hadir'); setMessage(''); }} className={`rounded-xl border px-4 py-4 text-sm font-semibold flex items-center justify-center gap-2 ${attendance === 'tidak_hadir' ? 'bg-stone-800 text-white border-stone-800' : 'bg-white text-stone-700 border-stone-200 hover:border-stone-500'}`}><XCircle className="w-4 h-4"/>Tidak Hadir</button>
           </div></div>
-          {attendance === 'hadir' && <div className="space-y-4 border-t border-stone-100 pt-5">{menuPhotos.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold text-stone-900">Foto Menu</h3><div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{menuPhotos.map((photo: any, i: number) => { const item = typeof photo === 'string' ? { url: photo, caption: '' } : photo; return <figure key={`${item.url}-${i}`} className="overflow-hidden rounded-xl border border-stone-200 bg-stone-50"><img src={item.url} alt={item.caption || `Menu ${i + 1}`} className="h-32 w-full object-cover" />{item.caption && <figcaption className="p-2 text-xs text-stone-600">{item.caption}</figcaption>}</figure>; })}</div></div>}<div className="flex items-center gap-2"><Utensils className="w-5 h-5 text-amber-800"/><div><h3 className="font-semibold text-stone-900 text-sm">Pilihan Menu Konsumsi</h3><p className="text-xs text-stone-500">Pilih satu menu untuk setiap orang. Pilihan boleh berbeda.</p></div></div>
-            {Array.from({ length: invitation.quota }, (_, i) => <div key={i} className="space-y-2"><label className="text-xs font-semibold text-stone-700">Menu untuk orang ke-{i + 1}</label><select value={foodChoices[i] || ''} onChange={e => setFoodChoices(prev => { const next = [...prev]; next[i] = e.target.value; return next; })} className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"><option value="">Pilih hidangan</option>{MENUS.map(menu => <option key={menu} value={menu}>{menu === 'Tidak memesan makan/minum' ? menu : `${menu} & Ice Tropical Tea`}</option>)}</select></div>)}
+          {attendance === 'hadir' && <div className="space-y-4 border-t border-stone-100 pt-5">{menuPhotos.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold text-stone-900">Foto Menu</h3><div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{menuPhotos.map((photo: any, i: number) => { const item = typeof photo === 'string' ? { url: photo, caption: '' } : photo; return <figure key={`${item.url}-${i}`} className="overflow-hidden rounded-xl border border-stone-200 bg-stone-50"><img src={item.url} alt={item.caption || `Menu ${i + 1}`} className="h-32 w-full object-cover" />{item.caption && <figcaption className="p-2 text-xs text-stone-600">{item.caption}</figcaption>}</figure>; })}</div></div>}<div className="flex items-center gap-2"><Utensils className="w-5 h-5 text-amber-800"/><div><h3 className="font-semibold text-stone-900 text-sm">Pilihan Menu Konsumsi</h3><p className="text-xs text-stone-500">Pilih satu hidangan untuk setiap orang. Daftar mengikuti nama/deskripsi menu yang diatur di panel Master. Pilihan boleh berbeda.</p></div></div>
+            {Array.from({ length: invitation.quota }, (_, i) => <div key={i} className="space-y-2"><label className="text-xs font-semibold text-stone-700">Menu untuk orang ke-{i + 1}</label><select value={foodChoices[i] || ''} onChange={e => setFoodChoices(prev => { const next = [...prev]; next[i] = e.target.value; return next; })} className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30"><option value="">Pilih hidangan</option>{menuOptions.map(menu => <option key={menu} value={menu}>{menu}</option>)}<option value={noOrderOption}>{noOrderOption}</option></select></div>)}
           </div>}
           <div className="space-y-3 border-t border-stone-100 pt-5"><div><p className="text-sm font-semibold text-stone-900">Pilih Avatar Anda</p><p className="text-xs text-stone-500">Pilih satu karakter kucing untuk ditampilkan bersama ucapan.</p></div><div className="grid grid-cols-5 gap-2">{avatars.map(avatar => <button key={avatar.id} type="button" onClick={() => { setSelectedAvatar(avatar.id); setMessage(''); }} aria-pressed={selectedAvatar === avatar.id} className={`rounded-2xl border-2 p-2 flex flex-col items-center gap-1 transition ${selectedAvatar === avatar.id ? 'border-amber-600 bg-amber-50 ring-2 ring-amber-200' : 'border-stone-100 bg-stone-50 hover:border-amber-300'}`}><img src={avatar.image} alt={avatar.label} className="h-14 w-14 rounded-full object-cover ring-2 ring-white shadow-sm"/><span className="text-[10px] font-medium text-stone-600">{avatar.label}</span></button>)}</div></div><div className="space-y-2 border-t border-stone-100 pt-5"><label htmlFor="guest-message" className="block text-sm font-semibold text-stone-900">Ucapan &amp; Doa</label><textarea id="guest-message" value={guestMessage} onChange={e => setGuestMessage(e.target.value)} maxLength={1000} rows={4} placeholder="Tuliskan ucapan dan doa untuk kedua mempelai..." className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3 py-3 text-sm text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/30" required /><p className="text-right text-[10px] text-stone-400">{guestMessage.length}/1000</p></div>
           {message && <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-xl p-3">{message}</p>}
