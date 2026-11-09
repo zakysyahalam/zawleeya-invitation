@@ -134,6 +134,17 @@ app.put('/api/wedding-data', requireMaster, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+const NO_ORDER_MENU = 'Tidak memesan makan/minum';
+async function allowedMenuChoices(db: Redis): Promise<string[]> {
+  const published = await db.get<any>('wedding:published-data');
+  const menuPhotos = Array.isArray(published?.referencePhotos?.menu) ? published.referencePhotos.menu : [];
+  const configuredMenus = menuPhotos
+    .map((photo: any) => typeof photo === 'string' ? '' : String(photo?.caption || '').trim())
+    .filter(Boolean);
+  // Keep validation in sync with the menu captions shown to guests in RSVPSection.
+  return [...new Set([...configuredMenus, NO_ORDER_MENU])];
+}
+
 const DEFAULT_PRESETS: any[] = [];
 // One-time migration: remove old built-in presets so the Master can start with a clean list.
 
@@ -178,7 +189,7 @@ app.put('/api/master/invitations/:token', requireMaster, async (req, res, next) 
       record.attendance = attendance;
       if (attendance === 'hadir') {
         const choices = Array.isArray(req.body?.foodChoices) ? req.body.foodChoices.map((v: unknown) => String(v)) : (record.foodChoices || []);
-        const allowed = ['Ayam Saos Mentega', 'Nasi Tongseng Sapi', 'Crispy Chicken Wings', 'Nasi Goreng Bistik Bumbu', 'Lidah Sambal Ijo', 'Katsu Mentai Butter Rice', 'Tidak memesan makan/minum'];
+        const allowed = await allowedMenuChoices(db);
         if (choices.length !== quota || choices.some((v: string) => !allowed.includes(v))) return res.status(400).json({ error: `Untuk status hadir, pilih tepat ${quota} menu yang valid.` });
         record.foodChoices = choices;
       } else {
@@ -261,7 +272,7 @@ app.post('/api/invitations/:token/rsvp', async (req, res, next) => {
     const avatarOptions = await db.get<any[]>('wedding:guestbook-avatars') || DEFAULT_GUESTBOOK_AVATARS;
     if (!avatarOptions.some((avatar: any) => avatar.id === avatarId)) return res.status(400).json({ error: 'Silakan pilih avatar kucing terlebih dahulu.' });
     const foodChoices = attendance === 'hadir' && Array.isArray(req.body?.foodChoices) ? req.body.foodChoices.map((v: unknown) => String(v)) : [];
-    const allowed = ['Ayam Saos Mentega', 'Nasi Tongseng Sapi', 'Crispy Chicken Wings', 'Nasi Goreng Bistik Bumbu', 'Lidah Sambal Ijo', 'Katsu Mentai Butter Rice', 'Tidak memesan makan/minum'];
+    const allowed = await allowedMenuChoices(db);
     if (attendance === 'hadir' && (foodChoices.length !== record.quota || foodChoices.some((v: string) => !allowed.includes(v)))) return res.status(400).json({ error: `Pilih tepat ${record.quota} menu sesuai jumlah orang yang diundang.` });
     record.attendance = attendance;
     record.foodChoices = foodChoices;
